@@ -2,45 +2,41 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const ADMIN_PASSWORD = 'ims2025'
-
 export default function AdminLogin() {
   const router = useRouter()
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
   const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
-      localStorage.setItem('admin', 'true')
-      router.push('/admin/dashboard')
-    } else {
-      setError('Wrong password')
-    }
+    if (password === 'ims2025') { localStorage.setItem('admin', 'true'); router.push('/admin/dashboard') }
+    else setError('Incorrect password')
   }
 
   return (
-    <main className="min-h-screen bg-[#1a1a2e] flex items-center justify-center p-4">
-      <div className="bg-[#16213e] p-8 rounded-2xl w-full max-w-sm shadow-xl">
-        <h1 className="text-2xl font-bold text-white text-center mb-2">Admin Login</h1>
-        <p className="text-gray-400 text-sm text-center mb-8">Faculty access only</p>
-
-        <div className="space-y-4">
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            placeholder="Enter admin password"
-            className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button
-            onClick={handleLogin}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold"
-          >
-            Login →
-          </button>
+    <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ width: '100%', maxWidth: '380px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: '16px' }}>IMS</span>
+          </div>
+          <h1 style={{ fontSize: '22px', fontWeight: 700 }}>Faculty Login</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>Admin access only</p>
         </div>
+        <div className="card">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label className="label">Admin Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                placeholder="Enter password" className="input" />
+            </div>
+            {error && <p style={{ color: 'var(--danger)', fontSize: '13px', background: 'var(--danger-light)', padding: '10px', borderRadius: '8px' }}>{error}</p>}
+            <button onClick={handleLogin} className="btn-primary" style={{ padding: '13px', fontSize: '15px' }}>Login →</button>
+          </div>
+        </div>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}>
+          Student? <a href="/login" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go to Student Login</a>
+        </p>
       </div>
     </main>
   )
