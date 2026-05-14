@@ -62,6 +62,10 @@ export default function TestQuestions() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <button onClick={() => router.push('/admin/dashboard')} className="text-gray-400 text-sm mb-1 hover:text-white">← Back to Dashboard</button>
+            <button onClick={() => router.push(`/admin/results/${id}`)}
+               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+               📊 View Results
+            </button>
             <h1 className="text-2xl font-bold text-white">{test?.title}</h1>
             <p className="text-gray-400 text-sm">{test?.duration_minutes} min · {test?.mode} · +{test?.marking_correct}/{test?.marking_wrong}</p>
           </div>
