@@ -3,137 +3,108 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-type Test = { id: string; title: string; schedule_time: string; mode: string; sequence_order: number; duration_minutes: number }
+type Student = { id: string; name: string; center: string; batch: string }
+type Test = { id: string; title: string; schedule_time: string; duration_minutes: number; mode: string; sequence_order: number }
 
-const empty = { title: '', schedule_time: '', duration_minutes: '', mode: 'timer', marking_correct: '3', marking_wrong: '-1' }
-
-export default function AdminDashboard() {
+export default function Dashboard() {
   const router = useRouter()
+  const [student, setStudent] = useState<Student | null>(null)
   const [tests, setTests] = useState<Test[]>([])
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(empty)
-  const [saving, setSaving] = useState(false)
+  const [completedIds, setCompletedIds] = useState<string[]>([])
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
-    if (!localStorage.getItem('admin')) { router.push('/admin'); return }
-    fetchTests()
+    const stored = localStorage.getItem('student')
+    if (!stored) { router.push('/login'); return }
+    const s = JSON.parse(stored); setStudent(s); fetchTests(s.id)
+    const interval = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(interval)
   }, [])
 
-  const fetchTests = async () => {
-    const { data } = await supabase.from('tests').select('*').order('sequence_order', { ascending: true })
-    setTests(data || [])
+  const fetchTests = async (studentId: string) => {
+    const { data: t } = await supabase.from('tests').select('*').order('sequence_order', { ascending: true })
+    const { data: a } = await supabase.from('attempts').select('test_id').eq('student_id', studentId).eq('is_completed', true)
+    setTests(t || []); setCompletedIds((a || []).map((x: { test_id: string }) => x.test_id))
   }
 
-  const handleCreate = async () => {
-    if (!form.title || !form.schedule_time || !form.duration_minutes) return
-    setSaving(true)
-    const { data } = await supabase.from('tests').insert([{
-      title: form.title, schedule_time: form.schedule_time,
-      duration_minutes: parseInt(form.duration_minutes), mode: form.mode,
-      marking_correct: parseInt(form.marking_correct), marking_wrong: parseInt(form.marking_wrong),
-      sequence_order: tests.length + 1
-    }]).select().single()
-    setSaving(false); setShowForm(false); setForm(empty)
-    if (data) router.push(`/admin/test/${data.id}`)
+  const getStatus = (test: Test, index: number) => {
+    if (completedIds.includes(test.id)) return 'completed'
+    if (now < new Date(test.schedule_time)) return 'upcoming'
+    if (index > 0 && !completedIds.includes(tests[index - 1]?.id)) return 'locked'
+    return 'live'
   }
 
-  const formatDt = (t: string) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const formatTime = (t: string) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
   return (
     <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh' }}>
 
-      {/* Nav */}
-      <nav style={{ background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 32px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Top Nav */}
+      <nav style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '34px', height: '34px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: '13px' }}>IMS</span>
           </div>
-          <div>
-            <span style={{ fontWeight: 700, fontSize: '16px' }}>Test Portal</span>
-            <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '99px' }}>Admin</span>
-          </div>
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>Test Portal</span>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => setShowForm(true)} className="btn-primary">+ New Test</button>
-          <button onClick={() => { localStorage.removeItem('admin'); router.push('/admin') }} className="btn-ghost">Logout</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontWeight: 600, fontSize: '14px' }}>{student?.name}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{student?.center} · {student?.batch}</p>
+          </div>
+          <button onClick={() => { localStorage.removeItem('student'); router.push('/login') }} className="btn-ghost" style={{ fontSize: '13px' }}>Logout</button>
         </div>
       </nav>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '4px' }}>All Tests</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>{tests.length} test{tests.length !== 1 ? 's' : ''} created</p>
+      {/* Content */}
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>My Tests</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>Complete tests in order. Next test unlocks after you submit the previous one.</p>
 
-        {/* Create Form */}
-        {showForm && (
-          <div className="card" style={{ marginBottom: '24px', borderTop: '3px solid var(--primary)' }}>
-            <h2 style={{ fontWeight: 700, fontSize: '17px', marginBottom: '20px' }}>Create New Test</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="label">Test Title</label>
-                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. RC Practice Test 01" className="input" />
-              </div>
-              <div>
-                <label className="label">Schedule Date & Time</label>
-                <input type="datetime-local" value={form.schedule_time} onChange={e => setForm({ ...form, schedule_time: e.target.value })} className="input" />
-              </div>
-              <div>
-                <label className="label">Duration (minutes)</label>
-                <input type="number" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: e.target.value })} placeholder="40" className="input" />
-              </div>
-              <div>
-                <label className="label">Mode</label>
-                <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value })} className="input">
-                  <option value="timer">⏱ Timer (countdown)</option>
-                  <option value="stopwatch">⏱ Stopwatch (count up)</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">Marking (Correct / Wrong)</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input type="number" value={form.marking_correct} onChange={e => setForm({ ...form, marking_correct: e.target.value })} placeholder="+3" className="input" />
-                  <input type="number" value={form.marking_wrong} onChange={e => setForm({ ...form, marking_wrong: e.target.value })} placeholder="-1" className="input" />
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button onClick={handleCreate} disabled={saving} className="btn-primary" style={{ padding: '10px 24px' }}>
-                {saving ? 'Creating...' : 'Create & Add Questions →'}
-              </button>
-              <button onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {/* Test List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {tests.length === 0 && !showForm && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {tests.length === 0 && (
             <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-              No tests yet. Click "+ New Test" to create one.
+              No tests scheduled yet. Check back soon.
             </div>
           )}
-          {tests.map((test, i) => (
-            <div key={test.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', cursor: 'pointer' }}
-              onClick={() => router.push(`/admin/test/${test.id}`)}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '99px', flexShrink: 0 }}>#{i + 1}</span>
-                  <span style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{test.title}</span>
+
+          {tests.map((test, i) => {
+            const status = getStatus(test, i)
+            const statusConfig: Record<string, { label: string; badge: string; clickable: boolean }> = {
+              live:      { label: '● Live — Start Now', badge: 'badge-green', clickable: true },
+              completed: { label: '✓ Completed',        badge: 'badge-blue',  clickable: true },
+              upcoming:  { label: '◷ Upcoming',          badge: 'badge-yellow', clickable: false },
+              locked:    { label: '🔒 Locked',            badge: 'badge-red',   clickable: false },
+            }
+            const cfg = statusConfig[status]
+
+            return (
+              <div key={test.id}
+                onClick={() => cfg.clickable && (status === 'live' ? router.push(`/exam/${test.id}`) : router.push(`/result/${test.id}`))}
+                style={{
+                  background: 'var(--bg)',
+                  border: `1px solid ${status === 'live' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '20px 24px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: cfg.clickable ? 'pointer' : 'default',
+                  opacity: status === 'locked' ? 0.5 : 1,
+                  boxShadow: status === 'live' ? '0 0 0 3px var(--primary-light)' : 'var(--shadow-sm)',
+                  transition: 'all 0.15s'
+                }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '16px' }}>{test.title}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>#{i + 1}</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    {test.duration_minutes} min · {test.mode === 'timer' ? '⏱ Timer' : '⏱ Stopwatch'} · {formatTime(test.schedule_time)}
+                  </p>
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  {formatDt(test.schedule_time)} · {test.duration_minutes} min · {test.mode}
-                </p>
+                <span className={cfg.badge} style={{ whiteSpace: 'nowrap' }}>{cfg.label}</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', flexShrink: 0 }}>
-                <button onClick={e => { e.stopPropagation(); router.push(`/admin/results/${test.id}`) }}
-                  style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: 'none', borderRadius: '8px', padding: '7px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-                  📊 Results
-                </button>
-                <button style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'none', borderRadius: '8px', padding: '7px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-                  ✎ Questions →
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </main>

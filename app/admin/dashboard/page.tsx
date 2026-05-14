@@ -3,16 +3,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-type Test = { id: string; title: string; schedule_time: string; mode: string; sequence_order: number }
+type Test = { id: string; title: string; schedule_time: string; mode: string; sequence_order: number; duration_minutes: number }
+
+const empty = { title: '', schedule_time: '', duration_minutes: '', mode: 'timer', marking_correct: '3', marking_wrong: '-1' }
 
 export default function AdminDashboard() {
   const router = useRouter()
   const [tests, setTests] = useState<Test[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({
-    title: '', schedule_time: '', duration_minutes: '',
-    mode: 'timer', marking_correct: '3', marking_wrong: '-1'
-  })
+  const [form, setForm] = useState(empty)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -29,124 +28,113 @@ export default function AdminDashboard() {
     if (!form.title || !form.schedule_time || !form.duration_minutes) return
     setSaving(true)
     const { data } = await supabase.from('tests').insert([{
-      title: form.title,
-      schedule_time: form.schedule_time,
-      duration_minutes: parseInt(form.duration_minutes),
-      mode: form.mode,
-      marking_correct: parseInt(form.marking_correct),
-      marking_wrong: parseInt(form.marking_wrong),
+      title: form.title, schedule_time: form.schedule_time,
+      duration_minutes: parseInt(form.duration_minutes), mode: form.mode,
+      marking_correct: parseInt(form.marking_correct), marking_wrong: parseInt(form.marking_wrong),
       sequence_order: tests.length + 1
     }]).select().single()
-
-    setSaving(false)
-    setShowForm(false)
-    setForm({ title: '', schedule_time: '', duration_minutes: '', mode: 'timer', marking_correct: '3', marking_wrong: '-1' })
+    setSaving(false); setShowForm(false); setForm(empty)
     if (data) router.push(`/admin/test/${data.id}`)
   }
 
-  return (
-    <main className="min-h-screen bg-[#1a1a2e] p-6">
-      <div className="max-w-4xl mx-auto">
+  const formatDt = (t: string) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-gray-400 text-sm">Manage tests and questions</p>
+  return (
+    <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh' }}>
+
+      {/* Nav */}
+      <nav style={{ background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 32px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '34px', height: '34px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: '13px' }}>IMS</span>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => setShowForm(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg font-semibold">
-              + New Test
-            </button>
-            <button onClick={() => { localStorage.removeItem('admin'); router.push('/admin') }}
-              className="text-gray-400 border border-gray-600 px-4 py-2 rounded-lg text-sm">
-              Logout
-            </button>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: '16px' }}>Test Portal</span>
+            <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '99px' }}>Admin</span>
           </div>
         </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => setShowForm(true)} className="btn-primary">+ New Test</button>
+          <button onClick={() => { localStorage.removeItem('admin'); router.push('/admin') }} className="btn-ghost">Logout</button>
+        </div>
+      </nav>
 
-        {/* Create Test Form */}
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '4px' }}>All Tests</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>{tests.length} test{tests.length !== 1 ? 's' : ''} created</p>
+
+        {/* Create Form */}
         {showForm && (
-          <div className="bg-[#16213e] rounded-xl p-6 mb-6 border border-orange-500">
-            <h2 className="text-white font-semibold text-lg mb-4">Create New Test</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="text-gray-400 text-sm mb-1 block">Test Title</label>
-                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g. RC Practice Test 01"
-                  className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" />
+          <div className="card" style={{ marginBottom: '24px', borderTop: '3px solid var(--primary)' }}>
+            <h2 style={{ fontWeight: 700, fontSize: '17px', marginBottom: '20px' }}>Create New Test</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label">Test Title</label>
+                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. RC Practice Test 01" className="input" />
               </div>
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Schedule Date & Time</label>
-                <input type="datetime-local" value={form.schedule_time}
-                  onChange={e => setForm({ ...form, schedule_time: e.target.value })}
-                  className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" />
+                <label className="label">Schedule Date & Time</label>
+                <input type="datetime-local" value={form.schedule_time} onChange={e => setForm({ ...form, schedule_time: e.target.value })} className="input" />
               </div>
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Duration (minutes)</label>
-                <input type="number" value={form.duration_minutes}
-                  onChange={e => setForm({ ...form, duration_minutes: e.target.value })}
-                  placeholder="e.g. 40"
-                  className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" />
+                <label className="label">Duration (minutes)</label>
+                <input type="number" value={form.duration_minutes} onChange={e => setForm({ ...form, duration_minutes: e.target.value })} placeholder="40" className="input" />
               </div>
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Mode</label>
-                <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value })}
-                  className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500">
+                <label className="label">Mode</label>
+                <select value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value })} className="input">
                   <option value="timer">⏱ Timer (countdown)</option>
                   <option value="stopwatch">⏱ Stopwatch (count up)</option>
                 </select>
               </div>
               <div>
-                <label className="text-gray-400 text-sm mb-1 block">Marking: Correct / Wrong</label>
-                <div className="flex gap-2">
-                  <input type="number" value={form.marking_correct}
-                    onChange={e => setForm({ ...form, marking_correct: e.target.value })}
-                    placeholder="+3"
-                    className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" />
-                  <input type="number" value={form.marking_wrong}
-                    onChange={e => setForm({ ...form, marking_wrong: e.target.value })}
-                    placeholder="-1"
-                    className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500" />
+                <label className="label">Marking (Correct / Wrong)</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input type="number" value={form.marking_correct} onChange={e => setForm({ ...form, marking_correct: e.target.value })} placeholder="+3" className="input" />
+                  <input type="number" value={form.marking_wrong} onChange={e => setForm({ ...form, marking_wrong: e.target.value })} placeholder="-1" className="input" />
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 mt-4">
-              <button onClick={handleCreate} disabled={saving}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold disabled:opacity-50">
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button onClick={handleCreate} disabled={saving} className="btn-primary" style={{ padding: '10px 24px' }}>
                 {saving ? 'Creating...' : 'Create & Add Questions →'}
               </button>
-              <button onClick={() => setShowForm(false)}
-                className="text-gray-400 border border-gray-600 px-4 py-2 rounded-lg text-sm">
-                Cancel
-              </button>
+              <button onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
             </div>
           </div>
         )}
 
         {/* Test List */}
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {tests.length === 0 && !showForm && (
-            <div className="bg-[#16213e] rounded-xl p-8 text-center text-gray-500">
+            <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
               No tests yet. Click "+ New Test" to create one.
             </div>
           )}
-          {tests.map(test => (
-            <div key={test.id}
-              onClick={() => router.push(`/admin/test/${test.id}`)}
-              className="bg-[#16213e] rounded-xl p-5 flex justify-between items-center cursor-pointer hover:bg-[#1a2a50]">
-              <div>
-                <h3 className="text-white font-semibold">{test.title}</h3>
-                <p className="text-gray-400 text-sm mt-1">
-                  {new Date(test.schedule_time).toLocaleString('en-IN')} · {test.mode}
+          {tests.map((test, i) => (
+            <div key={test.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', cursor: 'pointer' }}
+              onClick={() => router.push(`/admin/test/${test.id}`)}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '2px 8px', borderRadius: '99px', flexShrink: 0 }}>#{i + 1}</span>
+                  <span style={{ fontWeight: 600, fontSize: '15px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{test.title}</span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  {formatDt(test.schedule_time)} · {test.duration_minutes} min · {test.mode}
                 </p>
               </div>
-              <span className="text-orange-400 text-sm">Manage Questions →</span>
+              <div style={{ display: 'flex', gap: '8px', marginLeft: '16px', flexShrink: 0 }}>
+                <button onClick={e => { e.stopPropagation(); router.push(`/admin/results/${test.id}`) }}
+                  style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: 'none', borderRadius: '8px', padding: '7px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                  📊 Results
+                </button>
+                <button style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', border: 'none', borderRadius: '8px', padding: '7px 14px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                  ✎ Questions →
+                </button>
+              </div>
             </div>
           ))}
         </div>
-
       </div>
     </main>
   )
