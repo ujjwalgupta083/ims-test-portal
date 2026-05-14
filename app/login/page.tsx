@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const CENTERS = ['Surat', 'Ahmedabad', 'Mumbai', 'Delhi', 'Pune']
-const BATCHES = ['CAT 2025', 'CAT 2026', 'SNAP 2025', 'NMAT 2025', 'IPMAT 2025']
+const CENTERS = ['IMS Surat', 'IMS Ahmedabad', 'IMS Vadodara', 'IMS Gandhinagar']
+const BATCHES = ['CAT 2026', 'CAT 2027', 'IPMAT 2027','IPMAT 2028','CMAT 2027' ]
 
 export default function LoginPage() {
   const router = useRouter()
