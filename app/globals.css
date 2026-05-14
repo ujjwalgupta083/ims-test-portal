@@ -1,26 +1,138 @@
 @import "tailwindcss";
 
+/* ── THEME VARIABLES (change colors here, affects entire app) ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary:        #1a56db;
+  --primary-dark:   #1e40af;
+  --primary-light:  #dbeafe;
+  --primary-hover:  #1648c0;
+
+  --bg:             #ffffff;
+  --bg-secondary:   #f8fafc;
+  --bg-tertiary:    #f1f5f9;
+
+  --text:           #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+
+  --border:         #e2e8f0;
+  --border-strong:  #cbd5e1;
+
+  --success:        #16a34a;
+  --success-light:  #dcfce7;
+  --danger:         #dc2626;
+  --danger-light:   #fee2e2;
+  --warning:        #d97706;
+  --warning-light:  #fef3c7;
+
+  /* NTA Palette Exact Colors */
+  --nta-not-visited:       #999999;
+  --nta-not-answered:      #e74c3c;
+  --nta-answered:          #27ae60;
+  --nta-marked:            #7c3aed;
+  --nta-answered-marked:   #7c3aed;
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,0.12);
+  --radius:      10px;
+  --radius-lg:   16px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── BASE ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── REUSABLE CLASSES ── */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 9px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-outline:hover { background: var(--primary-light); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-ghost:hover { background: var(--bg-secondary); color: var(--text); }
+
+.input {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus { border-color: var(--primary); }
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.badge-green  { background: var(--success-light); color: var(--success); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+.badge-red    { background: var(--danger-light);  color: var(--danger);  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+.badge-blue   { background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+.badge-yellow { background: var(--warning-light); color: var(--warning); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; }
+
+/* ── NTA PALETTE ── */
+.nta-not-visited     { background: var(--nta-not-visited);     color: #fff; }
+.nta-not-answered    { background: var(--nta-not-answered);    color: #fff; }
+.nta-answered        { background: var(--nta-answered);        color: #fff; }
+.nta-marked          { background: var(--nta-marked);          color: #fff; }
+.nta-answered-marked { background: var(--nta-answered-marked); color: #fff; border: 3px solid #16a34a; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }

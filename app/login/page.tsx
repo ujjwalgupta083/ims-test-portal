@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const CENTERS = ['IMS Surat', 'IMS Ahmedabad', 'IMS Vadodara', 'IMS Gandhinagar']
-const BATCHES = ['CAT 2026', 'CAT 2027', 'IPMAT 2027','IPMAT 2028','CMAT 2027' ]
+const CENTERS = ['IMS Surat', 'IMS Ahmedabad', 'IMS Mumbai', 'IMS Delhi', 'IMS Pune']
+const BATCHES = ['CAT 2025', 'CAT 2026', 'SNAP 2025', 'NMAT 2025', 'IPMAT 2025']
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,112 +17,72 @@ export default function LoginPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.phone || !form.center || !form.batch) {
-      setError('Please fill all fields')
-      return
-    }
-    if (form.phone.length !== 10) {
-      setError('Enter a valid 10-digit phone number')
-      return
-    }
+    if (!form.name || !form.phone || !form.center || !form.batch) { setError('Please fill all fields'); return }
+    if (form.phone.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
+    setLoading(true); setError('')
 
-    setLoading(true)
-    setError('')
-
-    const { data: existing } = await supabase
-      .from('students')
-      .select('*')
-      .eq('phone', form.phone)
-      .single()
-
+    const { data: existing } = await supabase.from('students').select('*').eq('phone', form.phone).single()
     if (existing) {
       localStorage.setItem('student', JSON.stringify(existing))
       router.push('/dashboard')
     } else {
-      const { data, error: insertError } = await supabase
-        .from('students')
-        .insert([form])
-        .select()
-        .single()
-
-      if (insertError) {
-        setError('Something went wrong. Try again.')
-      } else {
-        localStorage.setItem('student', JSON.stringify(data))
-        router.push('/dashboard')
-      }
+      const { data, error: err } = await supabase.from('students').insert([form]).select().single()
+      if (err) setError('Something went wrong. Try again.')
+      else { localStorage.setItem('student', JSON.stringify(data)); router.push('/dashboard') }
     }
     setLoading(false)
   }
 
   return (
-    <main className="min-h-screen bg-[#1a1a2e] flex items-center justify-center p-4">
-      <div className="bg-[#16213e] p-8 rounded-2xl w-full max-w-md shadow-xl">
+    <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ width: '100%', maxWidth: '420px' }}>
 
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white">IMS Test Portal</h1>
-          <p className="text-gray-400 text-sm mt-1">Enter your details to continue</p>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: '16px' }}>IMS</span>
+            </div>
+            <span style={{ fontSize: '20px', fontWeight: 700 }}>Test Portal</span>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Enter your details to continue</p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="text-gray-400 text-sm mb-1 block">Full Name</label>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter your full name"
-              className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-            />
+        <div className="card">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+            <div>
+              <label className="label">Full Name</label>
+              <input name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className="input" />
+            </div>
+
+            <div>
+              <label className="label">Mobile Number</label>
+              <input name="phone" value={form.phone} onChange={handleChange} placeholder="10-digit mobile number" maxLength={10} className="input" />
+            </div>
+
+            <div>
+              <label className="label">IMS Center</label>
+              <select name="center" value={form.center} onChange={handleChange} className="input">
+                <option value="">Select your center</option>
+                {CENTERS.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="label">Batch</label>
+              <select name="batch" value={form.batch} onChange={handleChange} className="input">
+                <option value="">Select your batch</option>
+                {BATCHES.map(b => <option key={b}>{b}</option>)}
+              </select>
+            </div>
+
+            {error && <p style={{ color: 'var(--danger)', fontSize: '13px', background: 'var(--danger-light)', padding: '10px 14px', borderRadius: '8px' }}>{error}</p>}
+
+            <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ padding: '13px', fontSize: '15px', marginTop: '4px' }}>
+              {loading ? 'Please wait...' : 'Enter Portal →'}
+            </button>
           </div>
-
-          <div>
-            <label className="text-gray-400 text-sm mb-1 block">Phone Number</label>
-            <input
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="10-digit mobile number"
-              maxLength={10}
-              className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-
-          <div>
-            <label className="text-gray-400 text-sm mb-1 block">IMS Center</label>
-            <select
-              name="center"
-              value={form.center}
-              onChange={handleChange}
-              className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option value="">Select your center</option>
-              {CENTERS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-gray-400 text-sm mb-1 block">Batch</label>
-            <select
-              name="batch"
-              value={form.batch}
-              onChange={handleChange}
-              className="w-full bg-[#0f3460] text-white px-4 py-3 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option value="">Select your batch</option>
-              {BATCHES.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-semibold mt-2 disabled:opacity-50"
-          >
-            {loading ? 'Please wait...' : 'Enter Portal →'}
-          </button>
         </div>
 
       </div>

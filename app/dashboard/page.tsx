@@ -4,10 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 type Student = { id: string; name: string; center: string; batch: string }
-type Test = {
-  id: string; title: string; schedule_time: string;
-  duration_minutes: number; mode: string; sequence_order: number
-}
+type Test = { id: string; title: string; schedule_time: string; duration_minutes: number; mode: string; sequence_order: number }
 
 export default function Dashboard() {
   const router = useRouter()
@@ -19,124 +16,97 @@ export default function Dashboard() {
   useEffect(() => {
     const stored = localStorage.getItem('student')
     if (!stored) { router.push('/login'); return }
-    const s = JSON.parse(stored)
-    setStudent(s)
-    fetchTests(s.id)
-
+    const s = JSON.parse(stored); setStudent(s); fetchTests(s.id)
     const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
 
   const fetchTests = async (studentId: string) => {
-    const { data: testsData } = await supabase
-      .from('tests')
-      .select('*')
-      .order('sequence_order', { ascending: true })
-
-    const { data: attemptsData } = await supabase
-      .from('attempts')
-      .select('test_id')
-      .eq('student_id', studentId)
-      .eq('is_completed', true)
-
-    setTests(testsData || [])
-    setCompletedIds((attemptsData || []).map((a: { test_id: string }) => a.test_id))
+    const { data: t } = await supabase.from('tests').select('*').order('sequence_order', { ascending: true })
+    const { data: a } = await supabase.from('attempts').select('test_id').eq('student_id', studentId).eq('is_completed', true)
+    setTests(t || []); setCompletedIds((a || []).map((x: { test_id: string }) => x.test_id))
   }
 
   const getStatus = (test: Test, index: number) => {
-    const scheduleTime = new Date(test.schedule_time)
-    const isCompleted = completedIds.includes(test.id)
-    const isLive = now >= scheduleTime
-    const prevCompleted = index === 0 || completedIds.includes(tests[index - 1]?.id)
-
-    if (isCompleted) return 'completed'
-    if (!isLive) return 'upcoming'
-    if (!prevCompleted) return 'locked'
+    if (completedIds.includes(test.id)) return 'completed'
+    if (now < new Date(test.schedule_time)) return 'upcoming'
+    if (index > 0 && !completedIds.includes(tests[index - 1]?.id)) return 'locked'
     return 'live'
   }
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'live': return 'bg-green-500 text-white'
-      case 'completed': return 'bg-blue-500 text-white'
-      case 'upcoming': return 'bg-yellow-500 text-black'
-      case 'locked': return 'bg-gray-600 text-gray-300'
-      default: return ''
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'live': return '🟢 Live — Start Now'
-      case 'completed': return '✅ Completed'
-      case 'upcoming': return '🕐 Upcoming'
-      case 'locked': return '🔒 Locked'
-      default: return ''
-    }
-  }
-
-  const handleTestClick = (test: Test, status: string) => {
-    if (status === 'live') router.push(`/exam/${test.id}`)
-    if (status === 'completed') router.push(`/result/${test.id}`)
-  }
-
-  const formatTime = (t: string) => new Date(t).toLocaleString('en-IN', {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-  })
+  const formatTime = (t: string) => new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
   return (
-    <main className="min-h-screen bg-[#1a1a2e] p-6">
+    <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh' }}>
 
-      {/* Header */}
-      <div className="max-w-4xl mx-auto mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Welcome, {student?.name} 👋</h1>
-          <p className="text-gray-400 text-sm mt-1">{student?.center} · {student?.batch}</p>
-        </div>
-        <button
-          onClick={() => { localStorage.removeItem('student'); router.push('/login') }}
-          className="text-gray-400 hover:text-white text-sm border border-gray-600 px-4 py-2 rounded-lg"
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Test List */}
-      <div className="max-w-4xl mx-auto space-y-4">
-        <h2 className="text-gray-400 text-sm uppercase tracking-wider mb-4">Available Tests</h2>
-
-        {tests.length === 0 && (
-          <div className="bg-[#16213e] rounded-xl p-8 text-center text-gray-500">
-            No tests scheduled yet. Check back soon.
+      {/* Top Nav */}
+      <nav style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '34px', height: '34px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: '13px' }}>IMS</span>
           </div>
-        )}
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>Test Portal</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontWeight: 600, fontSize: '14px' }}>{student?.name}</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{student?.center} · {student?.batch}</p>
+          </div>
+          <button onClick={() => { localStorage.removeItem('student'); router.push('/login') }} className="btn-ghost" style={{ fontSize: '13px' }}>Logout</button>
+        </div>
+      </nav>
 
-        {tests.map((test, index) => {
-          const status = getStatus(test, index)
-          return (
-            <div
-              key={test.id}
-              onClick={() => handleTestClick(test, status)}
-              className={`bg-[#16213e] rounded-xl p-6 flex justify-between items-center
-                ${status === 'live' ? 'cursor-pointer hover:bg-[#1a2a50] border border-green-500' : ''}
-                ${status === 'completed' ? 'cursor-pointer hover:bg-[#1a2a50]' : ''}
-                ${status === 'locked' || status === 'upcoming' ? 'opacity-60' : ''}
-              `}
-            >
-              <div>
-                <h3 className="text-white font-semibold text-lg">{test.title}</h3>
-                <p className="text-gray-400 text-sm mt-1">
-                  {test.duration_minutes} min · {test.mode === 'timer' ? '⏱ Timer' : '⏱ Stopwatch'} · Scheduled: {formatTime(test.schedule_time)}
-                </p>
-              </div>
-              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusStyle(status)}`}>
-                {getStatusLabel(status)}
-              </span>
+      {/* Content */}
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>My Tests</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>Complete tests in order. Next test unlocks after you submit the previous one.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {tests.length === 0 && (
+            <div className="card" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+              No tests scheduled yet. Check back soon.
             </div>
-          )
-        })}
-      </div>
+          )}
 
+          {tests.map((test, i) => {
+            const status = getStatus(test, i)
+            const statusConfig: Record<string, { label: string; badge: string; clickable: boolean }> = {
+              live:      { label: '● Live — Start Now', badge: 'badge-green', clickable: true },
+              completed: { label: '✓ Completed',        badge: 'badge-blue',  clickable: true },
+              upcoming:  { label: '◷ Upcoming',          badge: 'badge-yellow', clickable: false },
+              locked:    { label: '🔒 Locked',            badge: 'badge-red',   clickable: false },
+            }
+            const cfg = statusConfig[status]
+
+            return (
+              <div key={test.id}
+                onClick={() => cfg.clickable && (status === 'live' ? router.push(`/exam/${test.id}`) : router.push(`/result/${test.id}`))}
+                style={{
+                  background: 'var(--bg)',
+                  border: `1px solid ${status === 'live' ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '20px 24px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: cfg.clickable ? 'pointer' : 'default',
+                  opacity: status === 'locked' ? 0.5 : 1,
+                  boxShadow: status === 'live' ? '0 0 0 3px var(--primary-light)' : 'var(--shadow-sm)',
+                  transition: 'all 0.15s'
+                }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '16px' }}>{test.title}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>#{i + 1}</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    {test.duration_minutes} min · {test.mode === 'timer' ? '⏱ Timer' : '⏱ Stopwatch'} · {formatTime(test.schedule_time)}
+                  </p>
+                </div>
+                <span className={cfg.badge} style={{ whiteSpace: 'nowrap' }}>{cfg.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </main>
   )
 }
