@@ -18,17 +18,12 @@ export default function Home() {
       {/* Card */}
       <div className="card" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '8px', color: 'var(--text)' }}>Welcome Back</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '28px' }}>Sign in to access your tests and performance dashboard</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '28px' }}>Login to your daily test portal</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Link href="/login" style={{ textDecoration: 'none' }}>
             <button className="btn-primary" style={{ width: '100%', padding: '13px', fontSize: '15px' }}>
               Student Login
-            </button>
-          </Link>
-          <Link href="/admin" style={{ textDecoration: 'none' }}>
-            <button className="btn-ghost" style={{ width: '100%', padding: '13px', fontSize: '15px' }}>
-              Faculty / Admin Login
             </button>
           </Link>
         </div>

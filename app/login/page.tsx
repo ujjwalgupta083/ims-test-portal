@@ -84,7 +84,8 @@ export default function LoginPage() {
             </button>
           </div>
         </div>
-
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}><a href="/." style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go Back to Home Page</a>
+        </p>
       </div>
     </main>
   )

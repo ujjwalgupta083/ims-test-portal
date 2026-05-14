@@ -34,8 +34,7 @@ export default function AdminLogin() {
             <button onClick={handleLogin} className="btn-primary" style={{ padding: '13px', fontSize: '15px' }}>Login →</button>
           </div>
         </div>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}>
-          Student? <a href="/login" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go to Student Login</a>
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}><a href="/." style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go Back to Home Page</a>
         </p>
       </div>
     </main>
