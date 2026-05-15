@@ -61,7 +61,7 @@ export default function AdminResults() {
     const times = qAns.map(a => a.time_spent_seconds).filter(t => t > 0)
     const avgTime = times.length ? Math.round(times.reduce((s, t) => s + t, 0) / times.length) : 0
     const accuracy = attempted.length ? Math.round((correct.length / attempted.length) * 100) : 0
-    return { ...q, attempted: attempted.length, correct: correct.length, avgTime, fastestTime: times.length ? Math.min(...times) : 0, accuracy, skipRate: totalAttempts ? Math.round(((totalAttempts - attempted.length) / totalAttempts) * 100) : 0 }
+    return { ...q, attempted: attempted.length, correct: correct.length, avgTime, fastestTime: times.length ? Math.min(...times) : 0, accuracy, skipRate: totalAttempts ? Math.round(((totalAttempts - attempted.length) / totalAttempts) * 100) : 0, totalStudents: totalAttempts }
   })
 
   const kpiCards = [
@@ -135,7 +135,7 @@ export default function AdminResults() {
               <h3 style={{ fontWeight: 700, marginBottom: '16px' }}>Score Distribution</h3>
               {ranked.map(a => (
                 <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', width: '120px', truncate: 'true', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.students?.name}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', width: '120px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.students?.name}</span>
                   <div style={{ flex: 1, background: 'var(--bg-tertiary)', borderRadius: '99px', height: '20px', position: 'relative' }}>
                     <div style={{ height: '20px', borderRadius: '99px', background: 'var(--primary)', width: `${maxScore > 0 ? (a.score / maxScore) * 100 : 0}%`, transition: 'width 0.5s' }} />
                     <span style={{ position: 'absolute', right: '8px', top: '0', fontSize: '11px', color: '#fff', lineHeight: '20px', fontWeight: 600 }}>{a.score}</span>
