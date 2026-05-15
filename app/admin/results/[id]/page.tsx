@@ -63,6 +63,32 @@ export default function AdminResults() {
     const accuracy = attempted.length ? Math.round((correct.length / attempted.length) * 100) : 0
     return { ...q, attempted: attempted.length, correct: correct.length, avgTime, fastestTime: times.length ? Math.min(...times) : 0, accuracy, skipRate: totalAttempts ? Math.round(((totalAttempts - attempted.length) / totalAttempts) * 100) : 0, totalStudents: totalAttempts }
   })
+  const exportCSV = () => {
+  const headers = ['Rank', 'Name', 'Center', 'Batch', 'Score', `Max Score (${maxScore})`, 'Correct', 'Wrong', 'Skipped', 'Accuracy %', 'Time Taken', 'Tab Switches', 'Submitted At']
+  const rows = ranked.map(a => [
+    a.rank,
+    a.students?.name,
+    a.students?.center,
+    a.students?.batch,
+    a.score,
+    maxScore,
+    a.total_correct,
+    a.total_wrong,
+    a.total_unattempted,
+    acc(a),
+    fmtT(totalT(a)),
+    a.tab_switches || 0,
+    new Date(a.submitted_at).toLocaleString('en-IN')
+  ])
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${test?.title?.replace(/\s+/g, '_')}_results.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
   const kpiCards = [
     { v: totalAttempts,        l: 'Attempted',      c: 'var(--text)'    },
@@ -83,7 +109,13 @@ export default function AdminResults() {
           <span style={{ color: 'var(--border-strong)' }}>|</span>
           <span style={{ fontWeight: 700 }}>{test?.title} — Results</span>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{totalAttempts} student{totalAttempts !== 1 ? 's' : ''} attempted</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{totalAttempts} student{totalAttempts !== 1 ? 's' : ''} attempted</p>
+          {totalAttempts > 0 && (
+          <button onClick={exportCSV} className="btn-outline" style={{ fontSize: '13px', padding: '6px 14px' }}>⬇ Export CSV
+          </button>
+          )}
+        </div>
       </nav>
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
