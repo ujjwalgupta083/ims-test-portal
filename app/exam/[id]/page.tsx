@@ -26,9 +26,16 @@ export default function ExamPage() {
   const [submitted, setSubmitted] = useState(false)
   const [tabSwitches, setTabSwitches] = useState(0)
   const [showTabWarning, setShowTabWarning] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const questionStartTime = useRef<number>(Date.now())
   const timeSpent = useRef<Record<string, number>>({})
   const tabSwitchRef = useRef(0)
+  
+  useEffect(() => {
+  const onFSChange = () => setIsFullscreen(!!document.fullscreenElement)
+  document.addEventListener('fullscreenchange', onFSChange)
+  return () => document.removeEventListener('fullscreenchange', onFSChange)
+}, [])
 
   useEffect(() => {
     const s = localStorage.getItem('student')
@@ -195,6 +202,12 @@ export default function ExamPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           {tabSwitches > 0 && <span style={{ background: 'rgba(255,0,0,0.3)', padding: '3px 10px', borderRadius: '99px', fontSize: '12px' }}>⚠️ {tabSwitches} tab switch{tabSwitches > 1 ? 'es' : ''}</span>}
+          {!isFullscreen && (
+            <button onClick={() => document.documentElement.requestFullscreen().catch(() => {})}
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}>
+              ⛶ Fullscreen
+            </button>
+          )}
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '11px', opacity: 0.8 }}>{test?.mode === 'timer' ? 'Time Remaining' : 'Time Elapsed'}</p>
             <p style={{ fontWeight: 700, fontSize: '20px', fontFamily: 'monospace', color: test?.mode === 'timer' && timeLeft < 300 ? '#fca5a5' : '#fff' }}>
@@ -260,8 +273,8 @@ export default function ExamPage() {
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button onClick={() => { setAnswers(p => { const n = {...p}; delete n[q.id]; return n }) }} className="btn-ghost" style={{ fontSize: '12px', padding: '8px 14px' }}>✕ Clear</button>
               <button onClick={() => { toggleMark(q.id); if (current < questions.length - 1) goTo(current + 1) }}
-                style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
-                ⚑ Mark & Next
+                style={{ background: '#7c3aed', color: '#fff', border: marked.has(q.id) ? '2px solid #4c1d95' : '2px solid transparent', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
+                {marked.has(q.id) ? '⚑ Marked — Unmark & Next' : '⚑ Mark for Review & Next'}
               </button>
               <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
                 {current > 0 && <button onClick={() => goTo(current - 1)} className="btn-ghost" style={{ fontSize: '12px', padding: '8px 14px' }}>← Back</button>}
@@ -285,14 +298,16 @@ export default function ExamPage() {
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
             <p style={{ fontWeight: 600, fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Legend</p>
             {[
-              { cls: 'nta-answered',        label: `Answered (${Object.keys(answers).length})` },
-              { cls: 'nta-not-answered',    label: `Not Answered (${[...visited].filter(v => !answers[v]).length})` },
-              { cls: 'nta-marked',          label: `Marked (${[...marked].filter(v => !answers[v]).length})` },
-              { cls: 'nta-answered-marked', label: `Ans+Marked (${[...marked].filter(v => answers[v]).length})` },
-              { cls: 'nta-not-visited',     label: `Not Visited (${questions.length - visited.size})` },
+              { cls: 'nta-answered',        count: Object.keys(answers).length,                        label: 'Answered' },
+              { cls: 'nta-marked',          count: [...marked].filter(v => !answers[v]).length,         label: 'Marked for Review' },
+              { cls: 'nta-answered-marked', count: [...marked].filter(v => answers[v]).length,          label: 'Ans + Marked' },
+              { cls: 'nta-not-visited',     count: questions.length - visited.size,                     label: 'Not Visited' },
+              { cls: 'nta-not-answered',    count: [...visited].filter(v => !answers[v]).length,        label: 'Not Answered' },
             ].map(l => (
               <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span className={l.cls} style={{ width: '22px', height: '22px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', flexShrink: 0 }}>1</span>
+                <span className={l.cls} style={{ width: '26px', height: '26px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
+                  {(l as { cls: string; count: number; label: string }).count}
+                </span>
                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{l.label}</span>
               </div>
             ))}
