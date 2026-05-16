@@ -3,34 +3,53 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const CENTERS = ['IMS Surat', 'IMS Ahmedabad', 'IMS Mumbai', 'IMS Delhi', 'IMS Pune']
-const BATCHES = ['CAT 2025', 'CAT 2026', 'SNAP 2025', 'NMAT 2025', 'IPMAT 2025']
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password + 'ims_salt_2025')
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 export default function LoginPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', phone: '', center: '', batch: '' })
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const handleLogin = async () => {
+    setError('')
+    if (!phone || !password) { setError('Please enter your phone number and password'); return }
+    if (phone.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
 
-  const handleSubmit = async () => {
-    if (!form.name || !form.phone || !form.center || !form.batch) { setError('Please fill all fields'); return }
-    if (form.phone.length !== 10) { setError('Enter a valid 10-digit phone number'); return }
-    setLoading(true); setError('')
+    setLoading(true)
 
-    const { data: existing } = await supabase.from('students').select('*').eq('phone', form.phone).single()
-    if (existing) {
-      localStorage.setItem('student', JSON.stringify(existing))
-      router.push('/dashboard')
-    } else {
-      const { data, error: err } = await supabase.from('students').insert([form]).select().single()
-      if (err) setError('Something went wrong. Try again.')
-      else { localStorage.setItem('student', JSON.stringify(data)); router.push('/dashboard') }
+    const { data: student } = await supabase
+      .from('students')
+      .select('*')
+      .eq('phone', phone)
+      .maybeSingle()
+
+    if (!student) {
+      setError('Phone number not registered. Please sign up first.')
+      setLoading(false); return
     }
-    setLoading(false)
+
+    if (!student.password_hash) {
+      setError('Account not set up yet. Please sign up to create a password.')
+      setLoading(false); return
+    }
+
+    const hash = await hashPassword(password)
+    if (student.password_hash !== hash) {
+      setError('Incorrect password. Please try again.')
+      setLoading(false); return
+    }
+
+    localStorage.setItem('student', JSON.stringify(student))
+    router.push('/dashboard')
   }
 
   return (
@@ -45,47 +64,62 @@ export default function LoginPage() {
             </div>
             <span style={{ fontSize: '20px', fontWeight: 700 }}>Test Portal</span>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Enter your details to continue</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Login to access your tests</p>
         </div>
 
         <div className="card">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
             <div>
-              <label className="label">Full Name</label>
-              <input name="name" value={form.name} onChange={handleChange} placeholder="Enter your full name" className="input" />
-            </div>
-
-            <div>
               <label className="label">Mobile Number</label>
-              <input name="phone" value={form.phone} onChange={handleChange} placeholder="10-digit mobile number" maxLength={10} className="input" />
+              <input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="10-digit mobile number"
+                maxLength={10}
+                className="input"
+              />
             </div>
 
             <div>
-              <label className="label">IMS Center</label>
-              <select name="center" value={form.center} onChange={handleChange} className="input">
-                <option value="">Select your center</option>
-                {CENTERS.map(c => <option key={c}>{c}</option>)}
-              </select>
+              <label className="label">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="input"
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              />
             </div>
 
-            <div>
-              <label className="label">Batch</label>
-              <select name="batch" value={form.batch} onChange={handleChange} className="input">
-                <option value="">Select your batch</option>
-                {BATCHES.map(b => <option key={b}>{b}</option>)}
-              </select>
-            </div>
+            {error && (
+              <p style={{ color: 'var(--danger)', fontSize: '13px', background: 'var(--danger-light)', padding: '10px 14px', borderRadius: '8px', margin: 0 }}>
+                {error}
+              </p>
+            )}
 
-            {error && <p style={{ color: 'var(--danger)', fontSize: '13px', background: 'var(--danger-light)', padding: '10px 14px', borderRadius: '8px' }}>{error}</p>}
-
-            <button onClick={handleSubmit} disabled={loading} className="btn-primary" style={{ padding: '13px', fontSize: '15px', marginTop: '4px' }}>
-              {loading ? 'Please wait...' : 'Enter Portal →'}
+            <button onClick={handleLogin} disabled={loading} className="btn-primary" style={{ padding: '13px', fontSize: '15px', marginTop: '4px' }}>
+              {loading ? 'Please wait...' : 'Login →'}
             </button>
+
+            <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+              New student?{' '}
+              <span
+                onClick={() => router.push('/signup')}
+                style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Create Account
+              </span>
+            </p>
+
           </div>
         </div>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}><a href="/." style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go Back to Home Page</a>
+
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px' }}>
+          <a href="/" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Go Back to Home Page</a>
         </p>
+
       </div>
     </main>
   )

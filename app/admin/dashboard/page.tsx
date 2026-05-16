@@ -111,6 +111,7 @@ export default function AdminDashboard() {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button onClick={() => { setEditingId(null); setForm(empty); setShowForm(true) }} className="btn-primary">+ New Test</button>
+          <button onClick={() => router.push('/admin/master-control')} className="btn-ghost">⚙️ Master Control</button>  {/* ADD THIS LINE */}
           <button onClick={() => { localStorage.removeItem('admin'); router.push('/admin') }} className="btn-ghost">Logout</button>
         </div>
       </nav>
