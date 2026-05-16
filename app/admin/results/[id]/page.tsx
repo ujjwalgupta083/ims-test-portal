@@ -218,42 +218,61 @@ export default function AdminResults() {
         )}
 
         {/* QUESTIONS */}
-        {activeTab === 'questions' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {qStats.map((q, i) => (
-              <div key={q.id} className="card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Q{i + 1} · <span style={{ color: q.difficulty === 'easy' ? 'var(--success)' : q.difficulty === 'hard' ? 'var(--danger)' : 'var(--warning)' }}>{q.difficulty}</span></p>
-                    <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: '1.5' }}>{q.question_text.length > 130 ? q.question_text.slice(0, 130) + '...' : q.question_text}</p>
-                  </div>
-                  <span style={{ background: q.accuracy >= 70 ? 'var(--success-light)' : q.accuracy >= 40 ? 'var(--warning-light)' : 'var(--danger-light)', color: q.accuracy >= 70 ? 'var(--success)' : q.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)', fontWeight: 700, fontSize: '14px', padding: '6px 14px', borderRadius: '99px', flexShrink: 0 }}>
-                    {q.accuracy}% accuracy
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '10px' }}>
-                  {[
-                    { v: `${q.attempted}/${q.totalStudents}`, l: 'Attempted',  c: 'var(--text)' },
-                    { v: q.correct,                           l: 'Correct',    c: 'var(--success)' },
-                    { v: fmtT(q.avgTime),                    l: 'Avg Time',   c: 'var(--primary)' },
-                    { v: fmtT(q.fastestTime),                l: 'Fastest',    c: '#7c3aed' },
-                    { v: `${q.skipRate}%`,                   l: 'Skip Rate',  c: 'var(--danger)' },
-                  ].map(s => (
-                    <div key={s.l} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-                      <p style={{ fontWeight: 700, fontSize: '18px', color: s.c }}>{s.v}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>{s.l}</p>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ background: 'var(--bg-tertiary)', borderRadius: '99px', height: '6px' }}>
-                    <div style={{ height: '6px', borderRadius: '99px', background: q.accuracy >= 70 ? 'var(--success)' : q.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)', width: `${q.accuracy}%` }} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+{activeTab === 'questions' && (
+  <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+      <thead>
+        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+          {['#', 'Question', 'Difficulty', 'Attempted', 'Correct', 'Wrong', 'Skipped', 'Accuracy', 'Avg Time', 'Fastest'].map(h => (
+            <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {qStats.length === 0 && (
+          <tr><td colSpan={10} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>No questions found</td></tr>
         )}
+        {qStats.map((q, i) => {
+          const wrong = q.attempted - q.correct
+          return (
+            <tr key={q.id} style={{ borderBottom: '1px solid var(--border)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
+              onMouseLeave={e => (e.currentTarget.style.background = '')}>
+              <td style={{ padding: '12px 14px', fontWeight: 700, color: 'var(--text-muted)' }}>Q{i + 1}</td>
+              <td style={{ padding: '12px 14px', maxWidth: '280px' }}>
+                <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.45', color: 'var(--text)' }}>
+                  {q.question_text}
+                </span>
+              </td>
+              <td style={{ padding: '12px 14px' }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '99px',
+                  background: q.difficulty === 'easy' ? 'var(--success-light)' : q.difficulty === 'hard' ? 'var(--danger-light)' : 'var(--warning-light)',
+                  color: q.difficulty === 'easy' ? 'var(--success)' : q.difficulty === 'hard' ? 'var(--danger)' : 'var(--warning)',
+                  textTransform: 'capitalize'
+                }}>{q.difficulty}</span>
+              </td>
+              <td style={{ padding: '12px 14px', color: 'var(--text)' }}>{q.attempted}<span style={{ color: 'var(--text-muted)' }}>/{q.totalStudents}</span></td>
+              <td style={{ padding: '12px 14px', color: 'var(--success)', fontWeight: 600 }}>{q.correct}</td>
+              <td style={{ padding: '12px 14px', color: 'var(--danger)', fontWeight: 600 }}>{wrong}</td>
+              <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }}>{q.totalStudents - q.attempted}</td>
+              <td style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '60px', background: 'var(--bg-tertiary)', borderRadius: '99px', height: '5px' }}>
+                    <div style={{ height: '5px', borderRadius: '99px', width: `${q.accuracy}%`, background: q.accuracy >= 70 ? 'var(--success)' : q.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)' }} />
+                  </div>
+                  <span style={{ fontWeight: 600, color: q.accuracy >= 70 ? 'var(--success)' : q.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)' }}>{q.accuracy}%</span>
+                </div>
+              </td>
+              <td style={{ padding: '12px 14px', color: 'var(--primary)', fontWeight: 600 }}>{fmtT(q.avgTime)}</td>
+              <td style={{ padding: '12px 14px', color: '#7c3aed', fontWeight: 600 }}>{fmtT(q.fastestTime)}</td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  </div>
+)}
       </div>
     </main>
   )
