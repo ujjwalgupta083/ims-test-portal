@@ -113,12 +113,17 @@ export default function MasterControlPage() {
 
   // ── Students: delete ─────────────────────────────────
   async function handleDeleteStudent(id: string, name: string) {
-    if (!confirm(`Remove ${name} from the portal? This will also delete all their test attempts.`)) return
-    setDeletingStudId(id)
-    await supabase.from('students').delete().eq('id', id)
-    setStudents(p => p.filter(s => s.id !== id))
+  if (!confirm(`Remove ${name} from the portal?...`)) return
+  setDeletingStudId(id)
+  const { error } = await supabase.from('students').delete().eq('id', id)
+  if (error) {
+    alert('Delete failed: ' + error.message)  // shows exact reason
     setDeletingStudId(null)
+    return
   }
+  setStudents(p => p.filter(s => s.id !== id))
+  setDeletingStudId(null)
+}
 
   // ── Batches: add ─────────────────────────────────────
   async function handleAddBatch() {
