@@ -27,6 +27,8 @@ export default function ResultPage() {
   const { id } = useParams()
   const searchParams = useSearchParams()
   const attemptId = searchParams.get('attempt')
+  const fromAdmin = searchParams.get('from') === 'admin'
+  const adminSid = searchParams.get('sid')
 
   const [attempt, setAttempt] = useState<Attempt | null>(null)
   const [answers, setAnswers] = useState<AnswerWithQ[]>([])
@@ -34,6 +36,7 @@ export default function ResultPage() {
   const [testTitle, setTestTitle] = useState('')
   const [reviewMode, setReviewMode] = useState(false)
   const [currentReview, setCurrentReview] = useState(0)
+  const [markingCorrect, setMarkingCorrect] = useState(3)
 
   useEffect(() => { if (attemptId) fetchResult() }, [attemptId])
 
@@ -43,7 +46,7 @@ export default function ResultPage() {
       .from('answers')
       .select('*, questions(question_text, option_a, option_b, option_c, option_d, correct_option, difficulty, passage_id, sequence_order)')
       .eq('attempt_id', attemptId)
-    const { data: t } = await supabase.from('tests').select('title').eq('id', id).single()
+    const { data: t } = await supabase.from('tests').select('title, marking_correct').eq('id', id).single()
     const { data: p } = await supabase.from('passages').select('*').eq('test_id', id)
 
     setAttempt(a)
@@ -51,6 +54,7 @@ export default function ResultPage() {
       (x.questions?.sequence_order || 0) - (y.questions?.sequence_order || 0))
     setAnswers(sorted)
     setTestTitle(t?.title || '')
+    setMarkingCorrect(t?.marking_correct || 3)
     const pm: Record<string, Passage> = {}
     ;(p || []).forEach((pass: Passage) => { pm[pass.id] = pass })
     setPassages(pm)
@@ -58,7 +62,7 @@ export default function ResultPage() {
 
   const fmt = (s: number) => s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
   const totalTime = attempt ? Math.floor((new Date(attempt.submitted_at).getTime() - new Date(attempt.started_at).getTime()) / 1000) : 0
-  const maxScore = answers.length * 3
+  const maxScore = answers.length * markingCorrect
   const accuracy = attempt && (attempt.total_correct + attempt.total_wrong) > 0
     ? Math.round((attempt.total_correct / (attempt.total_correct + attempt.total_wrong)) * 100) : 0
 
@@ -126,7 +130,6 @@ export default function ResultPage() {
                       <span style={{ background: '#f5f3ff', color: '#7c3aed', fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 600 }}>⚑ Marked for Review</span>
                     )}
                   </div>
-                  <span className={q.difficulty === 'easy' ? 'badge-green' : q.difficulty === 'hard' ? 'badge-red' : 'badge-yellow'}>{q.difficulty}</span>
                 </div>
                 <p style={{ fontSize: '15px', lineHeight: '1.8', color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{q.question_text}</p>
               </div>
@@ -233,7 +236,7 @@ export default function ResultPage() {
             </div>
 
             <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
-              <button onClick={() => router.push('/dashboard')}
+              <button onClick={() => router.push(fromAdmin && adminSid ? `/admin/student/${adminSid}` : '/dashboard')}
                 style={{ width: '100%', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '12px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
                 Back to Dashboard
               </button>
@@ -254,7 +257,7 @@ export default function ResultPage() {
           </div>
           <span style={{ fontWeight: 700 }}>Test Portal</span>
         </div>
-        <button onClick={() => router.push('/dashboard')} className="btn-ghost" style={{ fontSize: '13px' }}>← Back to Dashboard</button>
+        <button onClick={() => router.push(fromAdmin && adminSid ? `/admin/student/${adminSid}` : '/dashboard')} className="btn-ghost" style={{ fontSize: '13px' }}>← Back to Dashboard</button>
       </nav>
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '32px 24px' }}>
@@ -310,7 +313,7 @@ export default function ResultPage() {
           🔍 Review All Questions (Exam Style)
         </button>
 
-        <button onClick={() => router.push('/dashboard')} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: '15px' }}>
+        <button onClick={() => router.push(fromAdmin && adminSid ? `/admin/student/${adminSid}` : '/dashboard')} className="btn-primary" style={{ width: '100%', padding: '14px', fontSize: '15px' }}>
           Back to Dashboard →
         </button>
       </div>

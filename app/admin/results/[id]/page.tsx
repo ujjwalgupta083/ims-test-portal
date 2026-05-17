@@ -196,7 +196,7 @@ export default function AdminResults() {
                   <tr key={a.id} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}
-                    onClick={() => router.push(`/admin/student/${a.students?.id}`)}>
+                    onClick={() => router.push(`/admin/student/${a.students?.id}?fromTest=${id}`)}>
                     <td style={{ padding: '12px 14px', fontWeight: 700, color: a.rank === 1 ? '#f59e0b' : a.rank === 2 ? '#94a3b8' : a.rank === 3 ? '#f97316' : 'var(--text-muted)' }}>
                       {a.rank === 1 ? '🥇' : a.rank === 2 ? '🥈' : a.rank === 3 ? '🥉' : `#${a.rank}`}
                     </td>

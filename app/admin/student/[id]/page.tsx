@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 
 type Student = { id: string; name: string; phone: string; center: string; batch: string; created_at: string }
 type Attempt = { id: string; test_id: string; score: number; total_correct: number; total_wrong: number; total_unattempted: number; started_at: string; submitted_at: string; tab_switches: number; tests: { title: string; marking_correct: number; duration_minutes: number } }
@@ -9,6 +9,8 @@ type Attempt = { id: string; test_id: string; score: number; total_correct: numb
 export default function StudentProfile() {
   const router = useRouter()
   const { id } = useParams()
+  const searchParams = useSearchParams()
+  const fromTest = searchParams.get('fromTest')
   const [student, setStudent] = useState<Student | null>(null)
   const [attempts, setAttempts] = useState<Attempt[]>([])
 
@@ -35,7 +37,7 @@ export default function StudentProfile() {
   return (
     <main style={{ background: 'var(--bg-secondary)', minHeight: '100vh' }}>
       <nav style={{ background: '#fff', borderBottom: '1px solid var(--border)', padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>← Back</button>
+        <button onClick={() => router.push(fromTest ? `/admin/results/${fromTest}` : '/admin/dashboard')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>← Back</button>
         <span style={{ color: 'var(--border-strong)' }}>|</span>
         <span style={{ fontWeight: 700 }}>Student Profile</span>
       </nav>
@@ -92,7 +94,7 @@ export default function StudentProfile() {
               <tbody>
                 {attempts.map((a, i) => (
                   <tr key={a.id} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                    onClick={() => router.push(`/result/${a.test_id}?attempt=${a.id}`)}>
+                    onClick={() => router.push(`/result/${a.test_id}?attempt=${a.id}&from=admin&sid=${id}`)}>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{a.tests?.title}</td>
                     <td style={{ padding: '12px 14px' }}><span style={{ color: 'var(--primary)', fontWeight: 700 }}>{a.score}</span></td>
                     <td style={{ padding: '12px 14px', color: 'var(--success)' }}>{a.total_correct}</td>

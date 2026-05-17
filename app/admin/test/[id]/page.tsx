@@ -31,7 +31,7 @@ export default function TestQuestions() {
   const [sectionForm, setSectionForm] = useState({ title: '', duration_minutes: '0', mode: 'timer' })
   const [showSectionForm, setShowSectionForm] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<'standalone' | 'passage' | 'csv' | 'sections'>('standalone')
+  const [activeTab, setActiveTab] = useState<'standalone' | 'passage' | 'csv' | 'sections'>('sections')
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedQs, setExpandedQs] = useState<Set<string>>(new Set())
   const [selectedQs, setSelectedQs] = useState<Set<string>>(new Set())
@@ -65,8 +65,9 @@ export default function TestQuestions() {
   }
 
   const handleSaveQ = async () => {
-    if (!form.question_text || !form.option_a || !form.option_b || !form.option_c || !form.option_d) return
-    setSaving(true)
+  if (!form.question_text || !form.option_a || !form.option_b || !form.option_c || !form.option_d) return
+  if (!form.passage_id && !form.section_id) { alert('Please select a section for this question.'); return }
+  setSaving(true)
     const payload = { ...form }
     if (payload.passage_id) payload.section_id = null
     if (editingQ) {
@@ -136,8 +137,9 @@ export default function TestQuestions() {
   }
 
   const handleSavePassage = async () => {
-    if (!passageForm.passage_text) return
-    setSaving(true)
+  if (!passageForm.passage_text) return
+  if (!passageForm.section_id) { alert('Please select a section for this passage.'); return }
+  setSaving(true)
     const payload = { title: passageForm.title, passage_text: passageForm.passage_text, section_id: passageForm.section_id || null }
     if (editingPassageId) {
       await supabase.from('passages').update(payload).eq('id', editingPassageId)
@@ -164,9 +166,11 @@ export default function TestQuestions() {
   }
 
   const handleSaveSection = async () => {
-    if (!sectionForm.title.trim()) return
-    setSaving(true)
-    await supabase.from('sections').insert([{ test_id: id, title: sectionForm.title.trim(), duration_minutes: parseInt(sectionForm.duration_minutes) || 0, mode: sectionForm.mode, sequence_order: sections.length + 1 }])
+  if (!sectionForm.title.trim()) return
+  setSaving(true)
+  const isFirst = sections.length === 0
+  const duration = isFirst && test ? test.duration_minutes : parseInt(sectionForm.duration_minutes) || 0
+  await supabase.from('sections').insert([{ test_id: id, title: sectionForm.title.trim(), duration_minutes: duration, mode: sectionForm.mode, sequence_order: sections.length + 1 }])
     setSaving(false); setShowSectionForm(false)
     setSectionForm({ title: '', duration_minutes: '0', mode: 'timer' }); fetchData()
   }
@@ -211,6 +215,7 @@ export default function TestQuestions() {
       if (!row.question_text) row.error = 'Missing question text'
       else if (!row.option_a || !row.option_b || !row.option_c || !row.option_d) row.error = 'Missing options'
       else if (!['a', 'b', 'c', 'd'].includes(row.correct_option)) row.error = `Invalid correct_option "${row.correct_option}"`
+      else if (!row.section.trim()) row.error = 'Section is required — please fill the section column'
       return row
     })
   }
@@ -265,6 +270,7 @@ export default function TestQuestions() {
       else if (!row.question_text) row.error = 'Missing question_text'
       else if (!row.option_a || !row.option_b || !row.option_c || !row.option_d) row.error = 'Missing options'
       else if (!['a', 'b', 'c', 'd'].includes(row.correct_option)) row.error = `Invalid correct_option "${row.correct_option}"`
+      else if (!row.section.trim()) row.error = 'Section is required — please fill the section column'
       return row
     })
   }
@@ -319,7 +325,7 @@ export default function TestQuestions() {
 
   const filteredStandalone = standaloneQs.filter(q => !searchQuery || q.question_text.toLowerCase().includes(searchQuery.toLowerCase()))
   const filteredPassages = passages.filter(p => !searchQuery || p.title?.toLowerCase().includes(searchQuery.toLowerCase()) || passageQs(p.id).some(q => q.question_text.toLowerCase().includes(searchQuery.toLowerCase())))
-
+  const totalSectionDuration = sections.reduce((sum, s) => sum + s.duration_minutes, 0)
   const renderQuestionForm = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div>
@@ -341,15 +347,19 @@ export default function TestQuestions() {
             {['a', 'b', 'c', 'd'].map(o => <option key={o} value={o}>Option {o.toUpperCase()}</option>)}
           </select>
         </div>
-        {!form.passage_id && sections.length > 0 && (
-          <div>
-            <label className="label">Section (optional)</label>
-            <select value={form.section_id || ''} onChange={e => setForm({ ...form, section_id: e.target.value || null })} className="input">
-              <option value="">No section</option>
-              {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-            </select>
-          </div>
-        )}
+        {!form.passage_id && (
+  <div>
+    <label className="label">
+      Section <span style={{ color: 'var(--danger)', fontWeight: 700 }}>*</span>
+      {!form.section_id && <span style={{ color: 'var(--danger)', fontSize: '12px', marginLeft: '6px' }}>Required</span>}
+    </label>
+    <select value={form.section_id || ''} onChange={e => setForm({ ...form, section_id: e.target.value || null })} className="input"
+      style={{ borderColor: !form.section_id ? 'var(--danger)' : undefined }}>
+      <option value="">Select a section</option>
+      {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+    </select>
+  </div>
+)}
       </div>
       <button onClick={handleSaveQ} disabled={saving} className="btn-primary" style={{ padding: '12px', fontSize: '14px' }}>
         {saved ? '✅ Saved!' : saving ? 'Saving...' : editingQ ? 'Update Question' : 'Save & Add Next →'}
@@ -369,9 +379,11 @@ export default function TestQuestions() {
         </div>
         {sections.length > 0 && (
           <div>
-            <label className="label">Section (optional)</label>
+            <label className="label">
+              Section <span style={{ color: 'var(--danger)', fontWeight: 700 }}>*</span>
+            </label>
             <select value={passageForm.section_id} onChange={e => setPassageForm({ ...passageForm, section_id: e.target.value })} className="input">
-              <option value="">No section</option>
+              <option value="">Select a section</option>
               {sections.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
             </select>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>All questions in this set inherit this section.</p>
@@ -414,10 +426,10 @@ export default function TestQuestions() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {([
+            { key: 'sections',   label: `🗂 Sections${sections.length > 0 ? ` (${sections.length})` : ''}` },
             { key: 'standalone', label: '+ Standalone Question' },
             { key: 'passage',    label: '+ Passage/Set Based Questions' },
             { key: 'csv',        label: '📥 Bulk CSV Upload' },
-            { key: 'sections',   label: `🗂 Sections${sections.length > 0 ? ` (${sections.length})` : ''}` },
           ] as const).map(tab => (
             <button key={tab.key}
               onClick={() => { setActiveTab(tab.key); if (tab.key !== activeTab) { setForm(emptyQ); setEditingQ(null) }; if (tab.key !== 'passage') setShowPassageForm(false) }}
@@ -430,18 +442,33 @@ export default function TestQuestions() {
 
         {/* STANDALONE TAB */}
         {activeTab === 'standalone' && (
-          <div className="card" style={{ marginBottom: '24px', borderTop: '3px solid var(--primary)' }}>
-            <h2 style={{ fontWeight: 700, fontSize: '16px', marginBottom: '18px' }}>
-              {editingQ ? '✎ Edit Question' : 'Add Standalone Question'}
-              {editingQ && <button onClick={() => { setEditingQ(null); setForm(emptyQ) }} style={{ marginLeft: '12px', fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel edit</button>}
-            </h2>
-            {renderQuestionForm()}
-          </div>
-        )}
+          sections.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '40px', borderTop: '3px solid var(--warning)', marginBottom: '24px' }}>
+              <p style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>⚠️ No Sections Yet</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>Create at least one section before adding questions.</p>
+              <button onClick={() => setActiveTab('sections')} className="btn-primary">→ Go to Sections</button>
+            </div>
+          ) : (
+    <div className="card" style={{ marginBottom: '24px', borderTop: '3px solid var(--primary)' }}>
+      <h2 style={{ fontWeight: 700, fontSize: '16px', marginBottom: '18px' }}>
+        {editingQ ? '✎ Edit Question' : 'Add Standalone Question'}
+        {editingQ && <button onClick={() => { setEditingQ(null); setForm(emptyQ) }} style={{ marginLeft: '12px', fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel edit</button>}
+      </h2>
+      {renderQuestionForm()}
+    </div>
+  )
+)}
 
         {/* PASSAGE TAB */}
         {activeTab === 'passage' && (
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
+        sections.length === 0 ? (
+          <div className="card" style={{ textAlign: 'center', padding: '40px', borderTop: '3px solid var(--warning)', marginBottom: '24px' }}>
+          <p style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>⚠️ No Sections Yet</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '20px' }}>Create at least one section before adding passages.</p>
+          <button onClick={() => setActiveTab('sections')} className="btn-primary">→ Go to Sections</button>
+          </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '24px' }}>
             {/* Left Panel */}
             <div style={{ width: '290px', flexShrink: 0 }}>
               {showPassageForm ? passageFormPanel : (
@@ -496,6 +523,7 @@ export default function TestQuestions() {
               </div>
             </div>
           </div>
+          )
         )}
 
         {/* SECTIONS TAB */}
@@ -531,9 +559,11 @@ export default function TestQuestions() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={handleSaveSection} disabled={saving} className="btn-primary" style={{ fontSize: '13px', padding: '8px 16px' }}>{saving ? 'Saving...' : 'Add Section'}</button>
                   <button onClick={() => { setShowSectionForm(false); setSectionForm({ title: '', duration_minutes: '0', mode: 'timer' }) }} className="btn-ghost" style={{ fontSize: '13px' }}>Cancel</button>
+                        
                 </div>
               </div>
             )}
+            
             {sections.length === 0 && !showSectionForm && (
               <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px dashed var(--border)' }}>
                 <p style={{ fontSize: '14px', marginBottom: '4px' }}>No sections created</p>
@@ -560,6 +590,32 @@ export default function TestQuestions() {
                 )
               })}
             </div>
+          {sections.length > 0 && (
+  <div style={{
+    marginTop: '16px', padding: '12px 16px', borderRadius: '10px',
+    background: sections.length === 1 || totalSectionDuration === test?.duration_minutes
+      ? 'var(--success-light)' : 'var(--danger-light)',
+    border: `1px solid ${sections.length === 1 || totalSectionDuration === test?.duration_minutes
+      ? 'var(--success)' : 'var(--danger)'}`
+  }}>
+    {sections.length === 1 ? (
+      <p style={{ fontSize: '13px', color: 'var(--success)', fontWeight: 600 }}>
+        ✓ Single section — full test duration ({test?.duration_minutes} min) auto-assigned.
+      </p>
+    ) : totalSectionDuration === test?.duration_minutes ? (
+      <p style={{ fontSize: '13px', color: 'var(--success)', fontWeight: 600 }}>
+        ✓ Section durations add up correctly ({totalSectionDuration}/{test?.duration_minutes} min)
+      </p>
+    ) : (
+      <p style={{ fontSize: '13px', color: 'var(--danger)', fontWeight: 600 }}>
+        ⚠️ Section durations: {totalSectionDuration}/{test?.duration_minutes} min —{' '}
+        {(test?.duration_minutes || 0) - totalSectionDuration > 0
+          ? `${(test?.duration_minutes || 0) - totalSectionDuration} min unallocated`
+          : `${totalSectionDuration - (test?.duration_minutes || 0)} min over limit`}
+      </p>
+    )}
+  </div>
+)}
           </div>
         )}
 
@@ -707,17 +763,35 @@ export default function TestQuestions() {
             )}
 
             {filteredStandalone.length > 0 && (
-              <div>
-                <h3 style={{ fontWeight: 700, fontSize: '15px', marginBottom: '14px', color: 'var(--text-secondary)' }}>📝 Standalone Questions</h3>
-                {filteredStandalone.map((q, i) => (
-                  <QuestionCard key={q.id} q={q} index={i} sections={sections} passages={passages}
-                    onEdit={handleEditQ} onDelete={handleDeleteQ} onDuplicate={handleDuplicateQ}
-                    onReorder={handleReorder} isFirst={i === 0} isLast={i === filteredStandalone.length - 1}
-                    isSelected={selectedQs.has(q.id)} onSelect={id => setSelectedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })}
-                    isExpanded={expandedQs.has(q.id)} onExpand={id => setExpandedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })} />
-                ))}
-              </div>
-            )}
+  <div>
+    <h3 style={{ fontWeight: 700, fontSize: '15px', marginBottom: '14px', color: 'var(--text-secondary)' }}>📝 Standalone Questions</h3>
+    {sections.map(sec => {
+      const secQs = filteredStandalone.filter(q => q.section_id === sec.id)
+      if (secQs.length === 0) return null
+      return (
+        <div key={sec.id} style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px', padding: '4px 10px', background: 'var(--primary-light)', borderRadius: '6px', display: 'inline-block' }}>
+            {sec.title} — {secQs.length} question{secQs.length !== 1 ? 's' : ''}
+          </div>
+          {secQs.map((q, i) => (
+            <QuestionCard key={q.id} q={q} index={i} sections={sections} passages={passages}
+              onEdit={handleEditQ} onDelete={handleDeleteQ} onDuplicate={handleDuplicateQ}
+              onReorder={handleReorder} isFirst={i === 0} isLast={i === secQs.length - 1}
+              isSelected={selectedQs.has(q.id)} onSelect={id => setSelectedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })}
+              isExpanded={expandedQs.has(q.id)} onExpand={id => setExpandedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })} />
+          ))}
+        </div>
+      )
+    })}
+    {filteredStandalone.filter(q => !q.section_id).map((q, i) => (
+      <QuestionCard key={q.id} q={q} index={i} sections={sections} passages={passages}
+        onEdit={handleEditQ} onDelete={handleDeleteQ} onDuplicate={handleDuplicateQ}
+        onReorder={handleReorder} isFirst={i === 0} isLast={i === filteredStandalone.filter(x => !x.section_id).length - 1}
+        isSelected={selectedQs.has(q.id)} onSelect={id => setSelectedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })}
+        isExpanded={expandedQs.has(q.id)} onExpand={id => setExpandedQs(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })} />
+    ))}
+  </div>
+)}
 
             {searchQuery && filteredStandalone.length === 0 && filteredPassages.length === 0 && (
               <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No questions match "{searchQuery}"</div>
